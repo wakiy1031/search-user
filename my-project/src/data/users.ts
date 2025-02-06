@@ -1,4 +1,6 @@
-const USER_LIST = [
+import { User } from "../types/User";
+
+export const USER_LIST: User[] = [
   {
     id: 1,
     name: "鈴木太郎",
@@ -120,5 +122,3 @@ const USER_LIST = [
     availableEndCode: 505,
   },
 ];
-
-export default USER_LIST;
