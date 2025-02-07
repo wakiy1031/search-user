@@ -1,4 +1,4 @@
-import { User, Student, Mentor } from "../types/User";
+import { User } from "../types/User";
 import {
   TableContainer,
   NativeTable,
@@ -7,50 +7,49 @@ import {
   Tr,
   Th,
   Td,
+  Button,
+  HStack,
 } from "@yamada-ui/react";
+import { useUserTable } from "../hooks/useUserTable";
 
 interface UserTableProps {
   users: User[];
-  allUsers: User[]; // 全ユーザーリストを追加
+  allUsers: User[];
 }
 
+type SortField = "studyMinutes" | "score" | "experienceDays";
+
 export const UserTable: React.FC<UserTableProps> = ({ users, allUsers }) => {
-  // メンターが担当可能な生徒を取得する関数
-  const getAvailableStudents = (mentor: Mentor): string => {
-    const availableStudents = allUsers // allUsersを使用
-      .filter(
-        (user): user is Student =>
-          user.role === "student" &&
-          mentor.availableStartCode <= user.taskCode &&
-          mentor.availableEndCode >= user.taskCode
-      )
-      .map((student) => student.name);
-
-    return availableStudents.length > 0
-      ? availableStudents.join(", ")
-      : "対応可能な生徒がいません";
-  };
-
-  // 生徒に対応可能なメンターを取得する関数
-  const getAvailableMentors = (student: Student): string => {
-    const availableMentors = allUsers // allUsersを使用
-      .filter(
-        (user): user is Mentor =>
-          user.role === "mentor" &&
-          user.availableStartCode <= student.taskCode &&
-          user.availableEndCode >= student.taskCode
-      )
-      .map((mentor) => mentor.name);
-
-    return availableMentors.length > 0
-      ? availableMentors.join(", ")
-      : "対応可能なメンターがいません";
-  };
+  const {
+    sortField,
+    sortOrder,
+    handleSort,
+    getSortedUsers,
+    getAvailableStudents,
+    getAvailableMentors,
+  } = useUserTable(users, allUsers);
 
   // 全てのユーザーが同じroleかチェック
   const isAllSameRole =
     users.length > 0 && users.every((user) => user.role === users[0].role);
   const firstUserRole = users[0]?.role;
+
+  // ソートボタンのレンダリング
+  const renderSortButton = (field: SortField) => {
+    const isActive = sortField === field;
+    return (
+      <Button
+        size="xs"
+        variant={isActive ? "solid" : "outline"}
+        onClick={() => handleSort(field)}
+        ml={2}
+      >
+        {isActive ? (sortOrder === "asc" ? "↓" : "↑") : "⇅"}
+      </Button>
+    );
+  };
+
+  const sortedUsers = getSortedUsers();
 
   return (
     <TableContainer className="user-table-container">
@@ -69,17 +68,38 @@ export const UserTable: React.FC<UserTableProps> = ({ users, allUsers }) => {
             {/* 生徒のみの項目 */}
             {(!isAllSameRole || firstUserRole === "student") && (
               <>
-                <Th>勉強時間</Th>
+                <Th>
+                  <HStack gap={2}>
+                    <span>勉強時間</span>
+                    {isAllSameRole &&
+                      firstUserRole === "student" &&
+                      renderSortButton("studyMinutes")}
+                  </HStack>
+                </Th>
                 <Th>課題番号</Th>
                 <Th>勉強中の言語</Th>
-                <Th>スコア</Th>
+                <Th>
+                  <HStack gap={2}>
+                    <span>スコア</span>
+                    {isAllSameRole &&
+                      firstUserRole === "student" &&
+                      renderSortButton("score")}
+                  </HStack>
+                </Th>
                 <Th>対応可能なメンター</Th>
               </>
             )}
             {/* メンターのみの項目 */}
             {(!isAllSameRole || firstUserRole === "mentor") && (
               <>
-                <Th>実務経験月数</Th>
+                <Th>
+                  <HStack gap={2}>
+                    <span>実務経験月数</span>
+                    {isAllSameRole &&
+                      firstUserRole === "mentor" &&
+                      renderSortButton("experienceDays")}
+                  </HStack>
+                </Th>
                 <Th>現場で使っている言語</Th>
                 <Th>担当できる課題番号初め</Th>
                 <Th>担当できる課題番号終わり</Th>
@@ -89,7 +109,7 @@ export const UserTable: React.FC<UserTableProps> = ({ users, allUsers }) => {
           </Tr>
         </Thead>
         <Tbody>
-          {users.map((user) => (
+          {sortedUsers.map((user) => (
             <Tr key={user.id}>
               {/* 共通項目 */}
               <Td>{user.name}</Td>
