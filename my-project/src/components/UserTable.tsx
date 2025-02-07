@@ -11,34 +11,46 @@ import {
 
 interface UserTableProps {
   users: User[];
+  allUsers: User[]; // 全ユーザーリストを追加
 }
 
-export const UserTable: React.FC<UserTableProps> = ({ users }) => {
+export const UserTable: React.FC<UserTableProps> = ({ users, allUsers }) => {
   // メンターが担当可能な生徒を取得する関数
   const getAvailableStudents = (mentor: Mentor): string => {
-    return users
+    const availableStudents = allUsers // allUsersを使用
       .filter(
         (user): user is Student =>
           user.role === "student" &&
-          user.taskCode >= mentor.availableStartCode &&
-          user.taskCode <= mentor.availableEndCode
+          mentor.availableStartCode <= user.taskCode &&
+          mentor.availableEndCode >= user.taskCode
       )
-      .map((student) => student.name)
-      .join(", ");
+      .map((student) => student.name);
+
+    return availableStudents.length > 0
+      ? availableStudents.join(", ")
+      : "対応可能な生徒がいません";
   };
 
   // 生徒に対応可能なメンターを取得する関数
   const getAvailableMentors = (student: Student): string => {
-    return users
+    const availableMentors = allUsers // allUsersを使用
       .filter(
         (user): user is Mentor =>
           user.role === "mentor" &&
-          student.taskCode >= user.availableStartCode &&
-          student.taskCode <= user.availableEndCode
+          user.availableStartCode <= student.taskCode &&
+          user.availableEndCode >= student.taskCode
       )
-      .map((mentor) => mentor.name)
-      .join(", ");
+      .map((mentor) => mentor.name);
+
+    return availableMentors.length > 0
+      ? availableMentors.join(", ")
+      : "対応可能なメンターがいません";
   };
+
+  // 全てのユーザーが同じroleかチェック
+  const isAllSameRole =
+    users.length > 0 && users.every((user) => user.role === users[0].role);
+  const firstUserRole = users[0]?.role;
 
   return (
     <TableContainer className="user-table-container">
@@ -54,18 +66,26 @@ export const UserTable: React.FC<UserTableProps> = ({ users }) => {
             <Th>電話番号</Th>
             <Th>趣味</Th>
             <Th>URL</Th>
-            {/* 生徒項目 */}
-            <Th>勉強時間</Th>
-            <Th>課題番号</Th>
-            <Th>勉強中の言語</Th>
-            <Th>スコア</Th>
-            <Th>対応可能なメンター</Th>
-            {/* メンター項目 */}
-            <Th>実務経験月数</Th>
-            <Th>現場で使っている言語</Th>
-            <Th>担当できる課題番号初め</Th>
-            <Th>担当できる課題番号終わり</Th>
-            <Th>対応可能な生徒</Th>
+            {/* 生徒のみの項目 */}
+            {(!isAllSameRole || firstUserRole === "student") && (
+              <>
+                <Th>勉強時間</Th>
+                <Th>課題番号</Th>
+                <Th>勉強中の言語</Th>
+                <Th>スコア</Th>
+                <Th>対応可能なメンター</Th>
+              </>
+            )}
+            {/* メンターのみの項目 */}
+            {(!isAllSameRole || firstUserRole === "mentor") && (
+              <>
+                <Th>実務経験月数</Th>
+                <Th>現場で使っている言語</Th>
+                <Th>担当できる課題番号初め</Th>
+                <Th>担当できる課題番号終わり</Th>
+                <Th>対応可能な生徒</Th>
+              </>
+            )}
           </Tr>
         </Thead>
         <Tbody>
@@ -84,24 +104,38 @@ export const UserTable: React.FC<UserTableProps> = ({ users }) => {
                   {user.url}
                 </a>
               </Td>
-              {/* 生徒項目 */}
-              <Td>{user.role === "student" ? user.studyMinutes : "-"}</Td>
-              <Td>{user.role === "student" ? user.taskCode : "-"}</Td>
-              <Td>
-                {user.role === "student" ? user.studyLangs.join(", ") : "-"}
-              </Td>
-              <Td>{user.role === "student" ? user.score : "-"}</Td>
-              <Td>
-                {user.role === "student" ? getAvailableMentors(user) : "-"}
-              </Td>
-              {/* メンター項目 */}
-              <Td>{user.role === "mentor" ? user.experienceDays : "-"}</Td>
-              <Td>{user.role === "mentor" ? user.useLangs.join(", ") : "-"}</Td>
-              <Td>{user.role === "mentor" ? user.availableStartCode : "-"}</Td>
-              <Td>{user.role === "mentor" ? user.availableEndCode : "-"}</Td>
-              <Td>
-                {user.role === "mentor" ? getAvailableStudents(user) : "-"}
-              </Td>
+              {/* 生徒のみの項目 */}
+              {(!isAllSameRole || firstUserRole === "student") && (
+                <>
+                  <Td>{user.role === "student" ? user.studyMinutes : "-"}</Td>
+                  <Td>{user.role === "student" ? user.taskCode : "-"}</Td>
+                  <Td>
+                    {user.role === "student" ? user.studyLangs.join(", ") : "-"}
+                  </Td>
+                  <Td>{user.role === "student" ? user.score : "-"}</Td>
+                  <Td>
+                    {user.role === "student" ? getAvailableMentors(user) : "-"}
+                  </Td>
+                </>
+              )}
+              {/* メンターのみの項目 */}
+              {(!isAllSameRole || firstUserRole === "mentor") && (
+                <>
+                  <Td>{user.role === "mentor" ? user.experienceDays : "-"}</Td>
+                  <Td>
+                    {user.role === "mentor" ? user.useLangs.join(", ") : "-"}
+                  </Td>
+                  <Td>
+                    {user.role === "mentor" ? user.availableStartCode : "-"}
+                  </Td>
+                  <Td>
+                    {user.role === "mentor" ? user.availableEndCode : "-"}
+                  </Td>
+                  <Td>
+                    {user.role === "mentor" ? getAvailableStudents(user) : "-"}
+                  </Td>
+                </>
+              )}
             </Tr>
           ))}
         </Tbody>
